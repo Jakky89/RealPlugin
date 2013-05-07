@@ -3,14 +3,11 @@ package fr.crafter.tickleman.realplugin;
 import java.util.Iterator;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Server;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.BrewingStand;
 import org.bukkit.block.Chest;
-import org.bukkit.block.Dispenser;
-import org.bukkit.block.DoubleChest;
-import org.bukkit.block.Furnace;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -41,52 +38,25 @@ public class RealChest extends RealBlock
 	public RealChest(Block theBlock)
 	{
 		super(theBlock);
-		adjustCoords();
 	}
 	
 	public RealChest(BlockState theBlock)
 	{
-		super(theBlock.getBlock());
-		adjustCoords();
+		super(theBlock);
 	}
 	
 	public RealChest(Location location)
 	{
-		this(location.getBlock());
+		super(location);
 	}
 	
 	public RealChest(RealLocation location)
 	{
-		this(location.getLocation());
+		super(location);
 	}
 
-	public RealChest(String str) {
+	public RealChest(String str, Server theServer) {
 		super(str);
-		adjustCoords();
-	}
-	
-	public void adjustCoords() {
-		Block block = this.getBlock();
-		if (block != null) {
-			Location loc = null;
-			if (block instanceof Chest) {
-				loc = ((Chest)block.getState()).getLocation();
-			} else if (block instanceof DoubleChest) {
-				loc = ((DoubleChest)block.getState()).getLocation();
-			} else if (block instanceof Furnace) {
-				loc = ((Furnace)block.getState()).getLocation();
-			} else if (block instanceof Dispenser) {
-				loc = ((Dispenser)block.getState()).getLocation();
-			} else if (block instanceof BrewingStand) {
-				loc = ((BrewingStand)block.getState()).getLocation();
-			}
-			if (loc != null) {
-				this.worldName = loc.getWorld().getName();
-				this.locX = loc.getBlockX();
-				this.locY = loc.getBlockY();
-				this.locZ = loc.getBlockZ();
-			}
-		}
 	}
 	
 	public static Chest getNeighborChest(Block theBlock) {
@@ -103,16 +73,16 @@ public class RealChest extends RealBlock
 		return null;
 	}
 
-	public static Chest getNeighborChest(RealLocation theLocation) {
-		return getNeighborChest(theLocation.getLocation().getBlock());
+	public static Chest getNeighborChest(RealBlock theBlock, Server theServer) {
+		return getNeighborChest(theBlock.getBlock(theServer));
 	}
 	
-	public Chest getNeighborChest() {
-		return getNeighborChest(this);
+	public Chest getNeighborChest(Server theServer) {
+		return getNeighborChest(this, theServer);
 	}
 
-	public Inventory getNeighborChestInventory() {
-		Chest nbs = this.getNeighborChest();
+	public Inventory getNeighborChestInventory(Server theServer) {
+		Chest nbs = this.getNeighborChest(theServer);
 		if (nbs != null) {
 			return nbs.getBlockInventory();
 		}
@@ -120,9 +90,9 @@ public class RealChest extends RealBlock
 	}
 	
 	//-------------------------------------------------------------------------------- getInventory
-	public Inventory getInventory()
+	public Inventory getInventory(Server theServer)
 	{
-		Block block = this.getBlock();
+		Block block = this.getBlock(theServer);
 		if (block != null && (block instanceof InventoryHolder)) {
 			return ((InventoryHolder)block.getState()).getInventory();
 		}
@@ -130,17 +100,17 @@ public class RealChest extends RealBlock
 	}
 	
 	//-------------------------------------------------------------------------------- getItems
-	public RealItemStackList getItems()
+	public RealItemStackList getItems(Server theServer)
 	{
 		RealItemStackList chi = new RealItemStackList();
-		Inventory own = this.getInventory();
+		Inventory own = this.getInventory(theServer);
 		if (own != null) {
 			Iterator<ItemStack> owni = own.iterator();
 			while (owni.hasNext()) {
 				chi.add(owni.next());
 			}
 		}
-		Inventory other = this.getNeighborChestInventory();
+		Inventory other = this.getNeighborChestInventory(theServer);
 		if (other != null) {
 			Iterator<ItemStack> othi = other.iterator();
 			while (othi.hasNext()) {

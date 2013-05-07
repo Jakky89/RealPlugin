@@ -2,6 +2,7 @@ package fr.crafter.tickleman.realplugin;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Server;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -37,33 +38,35 @@ public class RealBlock extends RealLocation
 	}
 	
 	//---------------------------------------------------------------------------------- RealLocation
+	public RealBlock(BlockState block)
+	{
+		super(block);
+	}
+	
+	//---------------------------------------------------------------------------------- RealLocation
 	public RealBlock(Block block)
 	{
-		this(block.getLocation());
+		super(block);
 	}
 	
 	public RealBlock(RealLocation location) {
-		this(location.getWorldName(), location.getX(), location.getY(), location.getZ());
+		super(location);
 	}
 	
 	public RealBlock(RealBlock block) {
-		this(block.getWorldName(), block.getX(), block.getY(), block.getZ());
+		super(block.getWorldName(), block.getX(), block.getY(), block.getZ());
 	}
 	
 	public RealBlock(String str) {
 		super(str);
 	}
 	
-	public RealLocation getRealLocation() {
-		return (RealLocation)this;
+	public Block getBlock(Server theServer) {
+		return super.getLocation(theServer).getBlock();
 	}
 	
-	public Block getBlock() {
-		return this.getLocation().getBlock();
-	}
-	
-	public BlockState getBlockState() {
-		return this.getBlock().getState();
+	public BlockState getBlockState(Server theServer) {
+		return this.getBlock(theServer).getState();
 	}
 
 }
