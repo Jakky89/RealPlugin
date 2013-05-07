@@ -1,9 +1,11 @@
 package fr.crafter.tickleman.realplugin;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+
 
 public class RealLocation
 {
@@ -11,8 +13,11 @@ public class RealLocation
 	protected int locX;
 	protected int locY;
 	protected int locZ;
+	
+	protected static final int HASH_OFFSET = 18652613;
+	protected static final int HASH_PRIME = -2130706029;
 
-	//---------------------------------------------------------------------------------- RealLocation
+	
 	public RealLocation(String theWorldName, int x, int y, int z)
 	{
 		this.worldName = theWorldName;
@@ -21,15 +26,15 @@ public class RealLocation
 		this.locZ = z;
 	}
 	
-	//---------------------------------------------------------------------------------- RealLocation
-	public RealLocation(Location location)
-	{
+	public RealLocation(Location location) {
 		this(location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ());
 	}
+	
+	public RealLocation(BlockState block) {
+		this(block.getLocation());
+	}
 
-	//---------------------------------------------------------------------------------- RealLocation
-	public RealLocation(Block block)
-	{
+	public RealLocation(Block block) {
 		this(block.getLocation());
 	}
 	
@@ -37,22 +42,16 @@ public class RealLocation
 		this(location.getWorldName(), location.getX(), location.getY(), location.getZ());
 	}
 	
-	public RealLocation(RealBlock block) {
-		this(block.getWorldName(), block.getX(), block.getY(), block.getZ());
-	}
-	
-	//---------------------------------------------------------------------------------- RealLocation
-	public RealLocation(String str)
-	{
-		fromString(str);
+	public RealLocation(String str) {
+		this.fromString(str);
 	}
 	
 	public String getWorldName() {
 		return this.worldName;
 	}
 	
-	public World getWorld() {
-		return Bukkit.getServer().getWorld(worldName);
+	public World getWorld(Server theServer) {
+		return theServer.getWorld(this.worldName);
 	}
 	
 	public int getX() {
@@ -66,22 +65,38 @@ public class RealLocation
 	public int getZ() {
 		return this.locZ;
 	}
-
-	//----------------------------------------------------------------------------- calculateDistance
-	public double calculateDistance(RealLocation loc2)
+	
+	public int getAddX(int addX)
 	{
-		return Math.sqrt(Math.pow(Math.abs(this.getX() - loc2.getX()), 2) + Math.pow(Math.abs(this.getY() - loc2.getY()), 2) + Math.pow(Math.abs(this.getZ() - loc2.getZ()), 2));
+		return this.getX() + addX;
+	}
+	
+	public int getAddY(int addY)
+	{
+		return this.getY() + addY;
+	}
+	
+	public int getAddZ(int addZ)
+	{
+		return this.getZ() + addZ;
+	}
+	
+	public static double calculateDistance(RealLocation loc1, RealLocation loc2) {
+		return (double)Math.sqrt(Math.pow(Math.abs(loc1.getX() - loc2.getX()), 2) + Math.pow(Math.abs(loc1.getY() - loc2.getY()), 2) + Math.pow(Math.abs(loc1.getZ() - loc2.getZ()), 2));
 	}
 
-	//------------------------------------------------------------------------------------ toLocation
-	public Location getLocation()
-	{
-		return new Location(this.getWorld(), this.getX(), this.getY(), this.getZ());
+	public double calculateDistance(RealLocation loc2) {
+		return calculateDistance(this, loc2);
+	}
+
+	public Location getLocation(Server theServer) {
+		return new Location(this.getWorld(theServer), this.getX(), this.getY(), this.getZ());
 	}
 	
 	public boolean fromString(String[] str)
 	{
-		if (str != null && str.length >= 4) {
+		if (str != null && str.length >= 4)
+		{
 			try {
 				this.worldName = str[0];
 				this.locX = Integer.parseInt(str[1]);
@@ -89,38 +104,29 @@ public class RealLocation
 				this.locZ = Integer.parseInt(str[3]);
 				return true;
 			} catch (Exception e) {
-				System.out.println("[RealLocation] Error while converting from string location: " + e.getMessage());
-				return false;
+				System.out.println("[RealLocation] Exception occurred while converting from string location: " + e.getMessage());
 			}
 		}
-		System.out.println("[RealLocation] Error while converting from string location!");
 		return false;
 	}
 
 	public boolean fromString(String str)
 	{
 		if (str != null && !str.isEmpty()) {
-			try {
-				String[] coords = str.trim().split(";");
-				return this.fromString(coords);
-			} catch (Exception e) {
-				System.out.println("[RealLocation] Error while converting from string location: " + e.getMessage());
-				return false;
-			}
+			return this.fromString(str.split(";"));
 		}
-		System.out.println("[RealLocation] Error while converting from string location!");
 		return false;
 	}
 	
 	//-------------------------------------------------------------------------------------- toString
 	@Override
-	public String toString()
-	{
-		return this.getWorldName() + ";" + String.valueOf(this.getX()) + ";" + String.valueOf(this.getY()) + ";" + String.valueOf(this.getZ());
+	public String toString() {
+		return (this.getWorldName() + ";" + String.valueOf(this.getX()) + ";" + String.valueOf(this.getY()) + ";" + String.valueOf(this.getZ()));
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(Object obj)
+	{
 		if (obj == null) {
 			return false;
 		}
@@ -131,19 +137,30 @@ public class RealLocation
 			return false;
 		}
 		RealLocation other = (RealLocation)obj;
-		if ((this.getWorldName().equals(other.getWorldName())) && (this.getX() == other.getX()) && (this.getY() == other.getY()) && (this.getZ() == other.getZ())) {
+		if ((this.getWorldName() == other.getWorldName()) && (this.getX() == other.getX()) && (this.getY() == other.getY()) && (this.getZ() == other.getZ())) {
 			return true;
 		}
 		return false;
 	}
 	
+	/* 
+	 * Using FNV-1a algorithm (performed best with only minimal amount of collisions)
+	 */
 	@Override
-	public int hashCode() {
+	public int hashCode()
+	{
+		int hash = HASH_OFFSET;
 		if (this.getWorldName() != null) {
-			return (this.getX() ^ this.getY() ^ this.getZ() ^ this.getWorldName().hashCode() >>> 32);
-		} else {
-			return (this.getX() ^ this.getY() ^ this.getZ() >>> 32);
+			hash = hash ^ this.getWorldName().hashCode();
+			hash = hash * HASH_PRIME;
 		}
+		hash = hash ^ this.getX();
+		hash = hash * HASH_PRIME;
+		hash = hash ^ this.getY();
+		hash = hash * HASH_PRIME;
+		hash = hash ^ this.getZ();
+		hash = hash * HASH_PRIME;
+		return hash;
 	}
 
 }

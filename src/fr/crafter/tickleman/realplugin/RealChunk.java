@@ -1,8 +1,8 @@
 package fr.crafter.tickleman.realplugin;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -14,8 +14,11 @@ public class RealChunk
 	protected String worldName;
 	protected int chunkX;
 	protected int chunkZ;
+	
+	protected static final int HASH_OFFSET = 18652613;
+	protected static final int HASH_PRIME = -2130706029;
 
-	//---------------------------------------------------------------------------------- RealChunk
+
 	public RealChunk(String theWorldName, int theXposition, int theZposition)
 	{
 		this.worldName = theWorldName;
@@ -23,33 +26,19 @@ public class RealChunk
 		this.chunkZ = theZposition;
 	}
 	
-	//---------------------------------------------------------------------------------- RealChunk
-	public RealChunk(Chunk chunk)
-	{
+	public RealChunk(Chunk chunk) {
 		this(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
 	}
-	
-	//---------------------------------------------------------------------------------- RealChunk
-	public RealChunk(RealLocation location)
-	{
-		this(location.getLocation().getChunk());
-	}
-	
-	//---------------------------------------------------------------------------------- RealChunk
-	public RealChunk(Location location)
-	{
+
+	public RealChunk(Location location) {
 		this(location.getChunk());
 	}
 
-	//---------------------------------------------------------------------------------- RealChunk
-	public RealChunk(Block block)
-	{
+	public RealChunk(Block block) {
 		this(block.getLocation());
 	}
 	
-	//---------------------------------------------------------------------------------- RealChunk
-	public RealChunk(BlockState block)
-	{
+	public RealChunk(BlockState block) {
 		this(block.getLocation());
 	}
 	
@@ -57,12 +46,12 @@ public class RealChunk
 		return this.worldName;
 	}
 	
-	public World getWorld() {
-		return Bukkit.getServer().getWorld(this.worldName);
+	public World getWorld(Server theServer) {
+		return theServer.getWorld(this.worldName);
 	}
 	
-	public Chunk getChunk() {
-		return this.getWorld().getChunkAt(this.getX(), this.getZ());
+	public Chunk getChunk(Server theServer) {
+		return this.getWorld(theServer).getChunkAt(this.getX(), this.getZ());
 	}
 	
 	public int getX() {
@@ -72,11 +61,22 @@ public class RealChunk
 	public int getZ() {
 		return this.chunkZ;
 	}
+	
+	public int getAddX(int addX) {
+		return this.getX() + addX;
+	}
+	
+	public int getAddZ(int addZ) {
+		return this.getZ() + addZ;
+	}
+	
+	public static double calculateDistance(RealChunk realChunk, RealChunk chunk2) {
+		return Math.sqrt(Math.pow(Math.abs(realChunk.getX() - chunk2.getX()), 2) + Math.pow(Math.abs(realChunk.getZ() - chunk2.getZ()), 2));
+	}
 
 	//----------------------------------------------------------------------------- calculateDistance
-	public double calculateDistance(Chunk chunk2)
-	{
-		return Math.sqrt(Math.pow(Math.abs(this.getX() - chunk2.getX()), 2) + Math.pow(Math.abs(this.getZ() - chunk2.getZ()), 2));
+	public double calculateDistance(RealChunk chunk2) {
+		return calculateDistance(this, chunk2);
 	}
 
 	//-------------------------------------------------------------------------------------- toString
@@ -104,13 +104,21 @@ public class RealChunk
 		return false;
 	}
 	
+	/* 
+	 * Using FNV-1a algorithm (performed best with minimal amount of collisions)
+	 */
 	@Override
 	public int hashCode() {
+		int hash = HASH_OFFSET;
 		if (this.getWorldName() != null) {
-			return (this.getX() ^ this.getZ() ^ this.getWorldName().hashCode() >>> 32);
-		} else {
-			return (this.getX() ^ this.getZ() >>> 32);
+			hash = hash ^ this.getWorldName().hashCode();
+			hash = hash * HASH_PRIME;
 		}
+		hash = hash ^ this.getX();
+		hash = hash * HASH_PRIME;
+		hash = hash ^ this.getZ();
+		hash = hash * HASH_PRIME;
+		return hash;
 	}
 
 }
